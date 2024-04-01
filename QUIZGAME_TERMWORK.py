@@ -50,7 +50,9 @@ class Quiz:
                 #the need for explicit concatenation or string formatting functions.
 
             userans = input("Enter the number of your answer: ")
+            #check wheather user answer is digit 
             if userans.isdigit():
+                #store user answer in tthe integer format
                 userans = int(userans)
                 if 1 <= userans <= len(choices): #there should be only one anser
                     if choices[userans - 1] == q["correct_answer"]:
