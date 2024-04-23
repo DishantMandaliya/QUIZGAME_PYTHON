@@ -56,10 +56,12 @@ class Quiz:
     def show_result(self):
         try:
             total_questions = len(self.questions)
+            #result data
             print(f"Quiz completed! Your score is: {self.score}/{total_questions}")
             messagebox.showinfo("End", f"Your Score, {self.score}/{total_questions}")
         except Exception as e:
             print(f"An error occurred: {e}")
+            #shows error in the code
 
     def login(self):
         login_window = tk.Tk()
