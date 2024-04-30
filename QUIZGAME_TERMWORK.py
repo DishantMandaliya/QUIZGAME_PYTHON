@@ -1,12 +1,15 @@
 import requests
 import tkinter as tk
 from tkinter import messagebox
-
+import csv
+import random
 
 class Quiz:
     def __init__(self):
         self.score = 0
         self.username = None
+        self.current_question_index = 0  # Track the index of the current question
+        self.questions = []
 
     def fetch_questions_from_api(self):
         api_url = "https://opentdb.com/api.php?amount=10&difficulty=easy"
@@ -28,85 +31,85 @@ class Quiz:
         if not self.questions:
             return
 
-        for i, q in enumerate(self.questions, 1):
-            print(f"Question {i}: {q['question']}")
-            choices = q["incorrect_answers"] + [q["correct_answer"]]
-            choices = [choice.encode("utf-8").decode("unicode_escape") for choice in choices]
-            choices.sort()
+        self.quiz_window = tk.Tk()
+        self.quiz_window.title("Quiz")
 
-            for i, choice in enumerate(choices, 1):
-                print(f"{i}. {choice}")
+        self.question_label = tk.Label(self.quiz_window, text="", font=("Arial", 16))
+        self.question_label.pack(padx=10, pady=10)
 
-            user_answer = input("Enter the number of your answer: ")
-            if user_answer.isdigit():
-                user_answer = int(user_answer)
-                if 1 <= user_answer <= len(choices):
-                    if choices[user_answer - 1] == q["correct_answer"]:
-                        print("Correct!\n")
-                        self.score += 1
-                    else:
-                        print("Wrong answer!\n")
-                else:
-                    print("Invalid input. Please enter a valid choice (1-{})".format(len(choices)))
-            else:
-                print("Invalid input. Please enter a number.\n")
+        self.answer_vars = []
+        for i in range(4):  # Assuming 4 answer choices
+            self.answer_vars.append(tk.IntVar(value=0))  # Store answer selection (0 for not selected)
 
-        self.show_result()
+        self.answer_buttons = []
+        for i in range(4):
+            answer_button = tk.Radiobutton(
+                self.quiz_window, text="", variable=self.answer_vars[i], value=i+1
+            )
+            answer_button.pack(anchor="w", padx=20)
+            self.answer_buttons.append(answer_button)
 
-    def show_result(self):
-        try:
-            total_questions = len(self.questions)
-            #result data
-            print(f"Quiz completed! Your score is: {self.score}/{total_questions}")
-            messagebox.showinfo("End", f"Your Score, {self.score}/{total_questions}")
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            #shows error in the code
+        self.submit_button = tk.Button(self.quiz_window, text="Submit Answer", command=self.check_answer)
+        self.submit_button.pack(pady=10)
 
-    def login(self):
-        login_window = tk.Tk()
-        login_window.title("Login")
+        self.next_button = tk.Button(self.quiz_window, text="Next Question", state="disabled", command=self.next_question)
+        self.next_button.pack(pady=10)
 
-        username_label = tk.Label(login_window, text="Username:")
-        username_label.pack()
+        self.show_question(self.current_question_index)  # Show the first question
+        self.quiz_window.mainloop()
 
-        username_textbox = tk.Entry(login_window)
-        username_textbox.pack()
+    def show_question(self, question_index):
+        if not self.questions:
+            return
 
-        password_label = tk.Label(login_window, text="Password:")
-        password_label.pack()
+        question = self.questions[question_index]
+        self.question_label.config(text=question["question"])
 
-        password_textbox = tk.Entry(login_window, show="*")  # Show asterisks for password
-        password_textbox.pack()
+        # Shuffle the answer choices
+        answer_choices = [question["correct_answer"]] + question["incorrect_answers"]
+        random.shuffle(answer_choices)
 
-        def check_login():
-            username = username_textbox.get()
-            password = password_textbox.get()
+        for i in range(4):
+            self.answer_buttons[i].config(text=answer_choices[i])
+            self.answer_buttons[i].config(state="normal")  # Enable all buttons
 
-            user_data = {
-                "dishant": "123",
-                "ram": "jaishriram",
-                "krishna": "jaishrikrishna",
-            }
+        self.submit_button.config(state="normal")  # Enable submit button
+        self.next_button.config(state="disabled")  # Disable next button
 
-            if username in user_data and user_data[username] == password:
-                self.username = username
-                messagebox.showinfo("Login Successful", f"Welcome, {username}!")
-                login_window.destroy()
-                self.start_quiz()
-            else:
-                messagebox.showerror("Login Failed", "Invalid username or password")
+    def check_answer(self):
+        if not self.questions:
+            return
 
-        login_button = tk.Button(login_window, text="Login", command=check_login)
-        login_button.pack()
+        selected_answer = sum(var.get() for var in self.answer_vars)
+        if selected_answer == 0:
+            messagebox.showinfo("Selection Required", "Please select an answer.")
+            return
 
-        login_window.mainloop()
+        correct_answer = self.questions[self.current_question_index]["correct_answer"]
+        user_answer = self.answer_buttons[selected_answer - 1].cget("text")
 
-        return self.username is not None  # Return True if login successful, False otherwise
+        if user_answer == correct_answer:
+            self.score += 1
+            messagebox.showinfo("Correct!", "Your answer is correct.")
+        else:
+            messagebox.showinfo("Incorrect", f"Incorrect. The correct answer is: {correct_answer}")
 
+        # Disable buttons and enable next button
+        for button in self.answer_buttons:
+            button.config(state="disabled")
+        self.submit_button.config(state="disabled")
+        self.next_button.config(state="normal")
 
-if __name__ == "__main__":
-    quiz = Quiz()
-    if quiz.login():
-        quiz.start_quiz()
+    def next_question(self):
+        if not self.questions:
+            return
 
+        self.current_question_index += 1
+        if self.current_question_index < len(self.questions):
+            self.show_question(self.current_question_index)
+        else:
+            messagebox.showinfo("End of Quiz", f"Quiz ended. Your score: {self.score}")
+
+# Usage
+quiz = Quiz()
+quiz.start_quiz()
