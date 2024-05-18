@@ -1,7 +1,8 @@
 import requests
 import tkinter as tk
 from tkinter import messagebox
-import csv
+# import csv
+import html
 import random
 
 class Quiz:
@@ -37,14 +38,13 @@ class Quiz:
         self.question_label = tk.Label(self.quiz_window, text="", font=("Arial", 16))
         self.question_label.pack(padx=10, pady=10)
 
-        self.answer_vars = []
-        for i in range(4):  # Assuming 4 answer choices
-            self.answer_vars.append(tk.IntVar(value=0))  # Store answer selection (0 for not selected)
-
+        # Create a single IntVar to track the selected answer
+        self.selected_answer_var = tk.IntVar(value=-1)
+    
         self.answer_buttons = []
-        for i in range(4):
+        for i in range(4):  # Assuming 4 answer choices
             answer_button = tk.Radiobutton(
-                self.quiz_window, text="", variable=self.answer_vars[i], value=i+1
+                self.quiz_window, text="", variable=self.selected_answer_var, value=i+1
             )
             answer_button.pack(anchor="w", padx=20)
             self.answer_buttons.append(answer_button)
@@ -63,10 +63,17 @@ class Quiz:
             return
 
         question = self.questions[question_index]
-        self.question_label.config(text=question["question"])
+        # decoding the question before showing it to UI as some of special character didn't decode while importing.
+        question_text = html.unescape(question["question"])  # Decode question text
 
-        # Shuffle the answer choices
-        answer_choices = [question["correct_answer"]] + question["incorrect_answers"]
+        #this is providing the index to each question and showing the question.
+        question_label_text = f"Question {question_index + 1}: {question_text}"
+        self.question_label.config(text=question_label_text)
+
+        # Decode answer choices
+        answer_choices = [html.unescape(choice) for choice in question["incorrect_answers"]]
+        correct_answer = html.unescape(question["correct_answer"])
+        answer_choices.append(correct_answer)
         random.shuffle(answer_choices)
 
         for i in range(4):
@@ -79,15 +86,19 @@ class Quiz:
     def check_answer(self):
         if not self.questions:
             return
-
-        selected_answer = sum(var.get() for var in self.answer_vars)
-        if selected_answer == 0:
+        
+        selected_answer = self.selected_answer_var.get()
+        if selected_answer == -1:
             messagebox.showinfo("Selection Required", "Please select an answer.")
             return
 
-        correct_answer = self.questions[self.current_question_index]["correct_answer"]
-        user_answer = self.answer_buttons[selected_answer - 1].cget("text")
+        question = self.questions[self.current_question_index]
+        answer_choices = [html.unescape(choice) for choice in question["incorrect_answers"]]
+        correct_answer = html.unescape(question["correct_answer"])
+        answer_choices.append(correct_answer)
 
+        # Get the user's selected answer
+        user_answer = answer_choices[selected_answer]
         if user_answer == correct_answer:
             self.score += 1
             messagebox.showinfo("Correct!", "Your answer is correct.")
@@ -100,6 +111,9 @@ class Quiz:
         self.submit_button.config(state="disabled")
         self.next_button.config(state="normal")
 
+        # Reset selected answer
+        self.selected_answer_var.set(-1)
+    
     def next_question(self):
         if not self.questions:
             return
@@ -109,7 +123,7 @@ class Quiz:
             self.show_question(self.current_question_index)
         else:
             messagebox.showinfo("End of Quiz", f"Quiz ended. Your score: {self.score}")
-
+            
 # Usage
 quiz = Quiz()
 quiz.start_quiz()
